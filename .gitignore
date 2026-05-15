@@ -1,0 +1,8 @@
+# GoLand
+.idea/
+
+# Binaries
+searchengine
+
+# Datasets
+*.tsv
