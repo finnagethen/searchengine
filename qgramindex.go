@@ -3,26 +3,38 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
 )
 
+// EntityID defines an ID type
+type EntityID int
+
+// Posting defines an entry in an inverted list
 type Posting struct {
-	ID        int
+	ID        EntityID
 	Frequency int
 }
 
+// Info defines the information for each record (document)
 type Info struct {
 	Name  string
 	Score int
 	Infos []string
 }
 
+// Match defines the return type of prefix querys
+type Match struct {
+	ID  EntityID
+	PED int
+}
+
 type QGramIndex struct {
 	Q               int
 	InvertedLists   map[string][]Posting // q-gram -> posting list
-	SynonymToRecord []int                // synonym id -> record id
+	SynonymToRecord []EntityID           // synonym id -> record id
 	Infos           []Info
 }
 
@@ -49,8 +61,8 @@ func (index *QGramIndex) BuildFormFile(path string) error {
 	}
 	defer file.Close()
 
-	recordID := 0
-	synonymID := 0
+	var recordID EntityID
+	var synonymID EntityID
 
 	scanner := bufio.NewScanner(file)
 	scanner.Scan() // skip the header
@@ -101,6 +113,23 @@ func (index *QGramIndex) BuildFormFile(path string) error {
 	}
 
 	return nil
+}
+
+// FindMatches retrieves all postings with PED(x, y) <= delta for a given integer delta
+// and prefix x. The prefix should be normalized and non-empty.
+// Returns a list of (ID, PED) tuples ordered first by PED and then record score.
+func (index *QGramIndex) FindMatches(prefix string, delta int) ([]Match, error) {
+	if len(prefix) == 0 {
+		return nil, fmt.Errorf("prefix must not be empty")
+	}
+
+	threshold := len(prefix) - (index.Q * delta)
+
+	if threshold <= 0 {
+		return nil, fmt.Errorf("threshold must be positive (got %d); adjust delta", threshold)
+	}
+
+	return nil, nil
 }
 
 // computeQGrams computes the q-grams for the given word.
