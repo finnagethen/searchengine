@@ -154,7 +154,11 @@ func (index *QGramIndex) FindMatches(prefix string, delta int) ([]Match, error) 
 
 	// Sort by PED and then record-score descending.
 	slices.SortFunc(result, func(a, b Match) int {
-		return 1
+		pedCmp := b.PED - a.PED
+		if pedCmp != 0 {
+			return pedCmp
+		}
+		return index.Infos[b.ID].Score - index.Infos[a.ID].Score
 	})
 
 	return result, nil
