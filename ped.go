@@ -5,7 +5,7 @@ import "slices"
 
 // PrefixEditDistance returns the PED of two strings, where `s1` is a prefix of `s2`.
 func PrefixEditDistance(s1, s2 string) int {
-	defer MeasureExecutionTime("PrefixEditDistance")()
+	// defer MeasureExecutionTime("PrefixEditDistance")()
 
 	n := len(s1)
 	m := len(s2)

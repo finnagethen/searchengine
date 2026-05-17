@@ -178,7 +178,7 @@ func (index *QGramIndex) FindMatches(prefix string, delta int) ([]Match, error) 
 		}
 	}
 
-	log.Printf("%d actual PED calculations out of %d candidates.", pedCalculations, len(candidates))
+	log.Printf("%d/%d ped calculations.", pedCalculations, len(candidates))
 
 	// Convert the map to a slice of (ID, PED) tuples.
 	var result []Match
