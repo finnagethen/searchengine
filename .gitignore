@@ -6,3 +6,6 @@ searchengine
 
 # Datasets
 *.tsv
+
+# Exceptions
+!test.tsv
