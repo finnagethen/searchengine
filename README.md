@@ -15,4 +15,4 @@ Where:
 ## Todos
 - [x] Fuzzy search using q-gram qIndex and prefix edit distance
 - [ ] BM25 ranking and evaluation
-- [ ] Similarity search using word embeddings
+- [x] Similarity search using word embeddings
