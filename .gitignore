@@ -2,7 +2,7 @@
 .idea/
 
 # Binaries
-searchengine
+/searchengine
 
 # Datasets / Word embeddings
 data/*
