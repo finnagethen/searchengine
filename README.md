@@ -13,6 +13,6 @@ Where:
 - `<info1>, <info2>, ...`: Additional information about the entry (optional).
 
 ## Todos
-- [x] Fuzzy search using q-gram index and prefix edit distance
+- [x] Fuzzy search using q-gram qIndex and prefix edit distance
 - [ ] BM25 ranking and evaluation
 - [ ] Similarity search using word embeddings
