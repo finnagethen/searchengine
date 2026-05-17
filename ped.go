@@ -5,12 +5,18 @@ import "slices"
 
 // PrefixEditDistance returns the PED of two strings, where `s1` is a prefix of `s2`
 // if the PED is smaller or equal to `delta`; `delta` + 1 otherwise.
+// Assume `delta` >= 0.
 func PrefixEditDistance(s1, s2 string, delta int) int {
 	// defer MeasureExecutionTime("PrefixEditDistance")()
 
 	n := len(s1) + 1
 	// It's enough to compute the first |s1| + delta + 1 columns.
 	m := min(n+delta, len(s2)+1)
+
+	// If `s2`is shorter than `s1` - delta, then the PED cannot be smaller or equal to `delta`.
+	if m < n-delta {
+		return delta + 1
+	}
 
 	// Only store the current and previous row and not the whole matrix.
 	// Initialize the first row to 0...m-1.
