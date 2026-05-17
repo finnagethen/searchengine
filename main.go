@@ -29,12 +29,27 @@ func parseArgs() (Args, error) {
 }
 
 func main() {
+	// Redirect logs to JSON file.
+	//file, err := os.Create("logs.json")
+	//if err != nil {
+	//	panic(err)
+	//}
+	//defer file.Close()
+	//
+	//logger := slog.New(
+	//	slog.NewJSONHandler(file, &slog.HandlerOptions{}),
+	//)
+	//
+	//slog.SetDefault(logger)
+
+	// Parse command line arguments.
 	args, err := parseArgs()
 	if err != nil {
 		slog.Error("error parsing arguments", "error", err)
 		os.Exit(1)
 	}
 
+	// Initialize the index.
 	index := NewQGramIndex(args.q)
 
 	slog.Info("building index",
@@ -47,6 +62,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Query loop.
 	for {
 		scanner := bufio.NewScanner(os.Stdin)
 		fmt.Print("Query: ")
@@ -61,6 +77,7 @@ func main() {
 			slog.Error("error finding matches", "error", err)
 		}
 		slog.Info("found matches", "count", len(postings))
+
 		// Print only the first 5 results.
 		for _, posting := range postings[:min(5, len(postings))] {
 			infos := index.Infos[posting.ID]
