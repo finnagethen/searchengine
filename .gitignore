@@ -4,12 +4,8 @@
 # Binaries
 searchengine
 
-# Datasets
-*.tsv
-
-# Word embeddings
-*.bin
-*.json
+# Datasets / Word embeddings
+data/*
 
 # Exceptions
-!test.tsv
+!data/test.tsv

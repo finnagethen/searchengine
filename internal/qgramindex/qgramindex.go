@@ -1,5 +1,4 @@
-// A simple qgram-index.
-package main
+package qgramindex
 
 import (
 	"bufio"
@@ -9,6 +8,9 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/finnagethen/searchengine/internal/ped"
+	"github.com/finnagethen/searchengine/internal/utils"
 )
 
 // RecordID defines an ID type for records
@@ -61,7 +63,7 @@ func NewQGramIndex(q int) *QGramIndex {
 //
 //	Albert Einstein\t275\tEinstein;A. Einstein\tGerman physicist\t...
 func (index *QGramIndex) BuildFormFile(path string) error {
-	defer Measure("QGramIndex_BuildFormFile")()
+	defer utils.Measure("QGramIndex_BuildFormFile")()
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -97,7 +99,7 @@ func (index *QGramIndex) BuildFormFile(path string) error {
 		names := append([]string{name}, strings.Split(synonyms, ";")...)
 		for _, n := range names {
 			index.SynonymToRecord = append(index.SynonymToRecord, recordID)
-			normedName := Normalize(n)
+			normedName := utils.Normalize(n)
 			index.NormedNames = append(index.NormedNames, normedName)
 
 			for _, qgram := range computeQGrams(normedName, index.Q) {
@@ -129,7 +131,7 @@ func (index *QGramIndex) BuildFormFile(path string) error {
 // and prefix x. The prefix should be normalized and non-empty.
 // Returns a list of (ID, PED) tuples ordered first by PED and then record score.
 func (index *QGramIndex) FindMatches(prefix string, delta int) ([]Match, error) {
-	defer Measure("QGramIndex_FindMatches")()
+	defer utils.Measure("QGramIndex_FindMatches")()
 
 	if len(prefix) == 0 {
 		return nil, fmt.Errorf("prefix must not be empty")
@@ -166,14 +168,14 @@ func (index *QGramIndex) FindMatches(prefix string, delta int) ([]Match, error) 
 			continue
 		}
 
-		ped := PrefixEditDistance(prefix, index.NormedNames[synID], delta)
+		distance := ped.PrefixEditDistance(prefix, index.NormedNames[synID], delta)
 		pedCalculations++
-		if ped <= delta {
+		if distance <= delta {
 			recID := index.SynonymToRecord[synID]
 
 			// If a record has multiple matching synonyms, keep the one with the lowest PED.
-			if oldPED, ok := matches[recID]; !ok || ped < oldPED {
-				matches[recID] = ped
+			if oldDistance, ok := matches[recID]; !ok || distance < oldDistance {
+				matches[recID] = distance
 			}
 		}
 	}

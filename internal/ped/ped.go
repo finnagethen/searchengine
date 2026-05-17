@@ -1,5 +1,4 @@
-// Function to calculate the prefix edit distance of two strings.
-package main
+package ped
 
 import "slices"
 

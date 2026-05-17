@@ -1,4 +1,4 @@
-package main
+package ped
 
 import "testing"
 

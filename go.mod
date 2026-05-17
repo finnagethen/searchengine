@@ -1,3 +1,3 @@
-module searchengine
+module github.com/finnagethen/searchengine
 
-go 1.25
+go 1.25.8
