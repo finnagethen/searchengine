@@ -5,16 +5,20 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
 
-// EntityID defines an ID type
-type EntityID int
+// RecordID defines an ID type for records
+type RecordID int
+
+// SynonymID defines an ID type for synonyms
+type SynonymID int
 
 // Posting defines an entry in an inverted list
 type Posting struct {
-	ID        EntityID
+	ID        SynonymID
 	Frequency int
 }
 
@@ -27,15 +31,15 @@ type Info struct {
 
 // Match defines the return type of prefix querys
 type Match struct {
-	ID  EntityID
+	ID  SynonymID
 	PED int
 }
 
 type QGramIndex struct {
 	Q               int
 	InvertedLists   map[string][]Posting // q-gram -> posting list
-	SynonymToRecord []EntityID           // synonym id -> record id
-	Infos           []Info
+	SynonymToRecord []SynonymID          // synonym id -> record id
+	Infos           []Info               // record id -> info
 }
 
 // NewQGramIndex returns a new QGramIndex.
@@ -61,8 +65,8 @@ func (index *QGramIndex) BuildFormFile(path string) error {
 	}
 	defer file.Close()
 
-	var recordID EntityID
-	var synonymID EntityID
+	var recordID RecordID
+	var synonymID SynonymID
 
 	scanner := bufio.NewScanner(file)
 	scanner.Scan() // skip the header
@@ -129,7 +133,37 @@ func (index *QGramIndex) FindMatches(prefix string, delta int) ([]Match, error) 
 		return nil, fmt.Errorf("threshold must be positive (got %d); adjust delta", threshold)
 	}
 
-	return nil, nil
+	// Maps the records to the number of qgrams in common with the prefix.
+	candidates := make(map[SynonymID]int)
+	for _, qgram := range computeQGrams(prefix, index.Q) {
+		// Find all records with at least `threshold` qgrams in common.
+		matches := index.InvertedLists[qgram]
+		for _, match := range matches {
+			candidates[match.ID] += 1
+		}
+	}
+
+	// Filter out records with less than `threshold` qgrams in common.
+	// Calculate the PED(x, y) for all relevant records.
+	var result []Match
+	for id, matchCount := range candidates {
+		if matchCount < threshold {
+			result = append(result, Match{id, matchCount})
+		}
+	}
+
+	// Sort by PED and then record-score descending.
+	slices.SortFunc(result, func(a, b Match) int {
+		return 1
+	})
+
+	return result, nil
+}
+
+// GetInfo retrieves the info for a given synonym ID.
+func (index *QGramIndex) GetInfo(id SynonymID) Info {
+	recordID := index.SynonymToRecord[id]
+	return index.Infos[recordID]
 }
 
 // computeQGrams computes the q-grams for the given word.
