@@ -87,13 +87,13 @@ func TestQGramIndex_FindMatches(t *testing.T) {
 		delta    int
 		expected []Match
 	}{
-		{"Prefix 'frei'; Delta 0", "frei", 0, []Match{
+		{"match_delta_0", "frei", 0, []Match{
 			{ID: 1, PED: 0},
 		}},
-		{"Prefix 'frei'; Delta 1", "fre", 1, []Match{
+		{"prefix_delta_1", "fre", 1, []Match{
 			{ID: 1, PED: 0}, {ID: 2, PED: 1}},
 		},
-		{"Prefix 'freib'; Delta 1", "fre", 1, []Match{
+		{"close_prefix_delta_1", "freib", 1, []Match{
 			{ID: 1, PED: 1},
 		}},
 	}
