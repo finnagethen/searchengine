@@ -7,7 +7,7 @@ import "slices"
 // if the PED is smaller or equal to `delta`; `delta` + 1 otherwise.
 // Assume `delta` >= 0.
 func PrefixEditDistance(s1, s2 string, delta int) int {
-	// defer MeasureExecutionTime("PrefixEditDistance")()
+	// defer Measure("PrefixEditDistance")()
 
 	n := len(s1) + 1
 	// It's enough to compute the first |s1| + delta + 1 columns.

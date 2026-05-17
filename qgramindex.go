@@ -4,7 +4,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"slices"
 	"strconv"
@@ -61,7 +61,7 @@ func NewQGramIndex(q int) *QGramIndex {
 //
 //	Albert Einstein\t275\tEinstein;A. Einstein\tGerman physicist\t...
 func (index *QGramIndex) BuildFormFile(path string) error {
-	defer MeasureExecutionTime("QGramIndex_BuildFormFile")()
+	defer Measure("QGramIndex_BuildFormFile")()
 
 	file, err := os.Open(path)
 	if err != nil {
@@ -97,7 +97,7 @@ func (index *QGramIndex) BuildFormFile(path string) error {
 		names := append([]string{name}, strings.Split(synonyms, ";")...)
 		for _, n := range names {
 			index.SynonymToRecord = append(index.SynonymToRecord, recordID)
-			normedName := normalize(n)
+			normedName := Normalize(n)
 			index.NormedNames = append(index.NormedNames, normedName)
 
 			for _, qgram := range computeQGrams(normedName, index.Q) {
@@ -129,7 +129,7 @@ func (index *QGramIndex) BuildFormFile(path string) error {
 // and prefix x. The prefix should be normalized and non-empty.
 // Returns a list of (ID, PED) tuples ordered first by PED and then record score.
 func (index *QGramIndex) FindMatches(prefix string, delta int) ([]Match, error) {
-	defer MeasureExecutionTime("QGramIndex_FindMatches")()
+	defer Measure("QGramIndex_FindMatches")()
 
 	if len(prefix) == 0 {
 		return nil, fmt.Errorf("prefix must not be empty")
@@ -178,8 +178,10 @@ func (index *QGramIndex) FindMatches(prefix string, delta int) ([]Match, error) 
 		}
 	}
 
-	log.Printf("%d/%d ped calculations.", pedCalculations, len(candidates))
-
+	slog.Info("ped calculations",
+		"completed", pedCalculations,
+		"candidates", len(candidates),
+	)
 	// Convert the map to a slice of (ID, PED) tuples.
 	var result []Match
 	for recID, bestPED := range matches {
@@ -215,26 +217,4 @@ func computeQGrams(word string, q int) []string {
 	}
 
 	return qgrams
-}
-
-// isAlphanumeric returns true if the given character is an alphanumeric
-// character.
-func isAlphanumeric(c byte) bool {
-	return (c >= 'a' && c <= 'z') ||
-		(c >= 'A' && c <= 'Z') ||
-		(c >= '0' && c <= '9')
-}
-
-// normalize normalizes a string to lower case and removes all
-// non-alphanumeric characters.
-func normalize(word string) string {
-	var builder strings.Builder
-	for i := 0; i < len(word); i++ {
-		c := word[i]
-		if isAlphanumeric(c) {
-			builder.WriteByte(c)
-		}
-	}
-
-	return strings.ToLower(builder.String())
 }

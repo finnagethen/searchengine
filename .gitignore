@@ -7,5 +7,9 @@ searchengine
 # Datasets
 *.tsv
 
+# Word embeddings
+*.bin
+*.json
+
 # Exceptions
 !test.tsv
