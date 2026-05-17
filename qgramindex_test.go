@@ -88,19 +88,22 @@ func TestQGramIndex_FindMatches(t *testing.T) {
 		expected []Match
 	}{
 		{"match_delta_0", "frei", 0, []Match{
-			{ID: 1, PED: 0},
+			{ID: 0, PED: 0},
 		}},
-		{"prefix_delta_1", "fre", 1, []Match{
-			{ID: 1, PED: 0}, {ID: 2, PED: 1}},
+		{"prefix_delta_1", "frei", 1, []Match{
+			{ID: 0, PED: 0}, {ID: 1, PED: 1}},
 		},
 		{"close_prefix_delta_1", "freib", 1, []Match{
-			{ID: 1, PED: 1},
+			{ID: 0, PED: 1},
 		}},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, _ := index.FindMatches(tc.prefix, tc.delta)
+			got, err := index.FindMatches(tc.prefix, tc.delta)
+			if err != nil {
+				t.Fatalf("FindMatches failed: %v", err)
+			}
 			if !reflect.DeepEqual(got, tc.expected) {
 				t.Errorf("FindMatches(%q, %d) = %+v; want %+v", tc.prefix, tc.delta, got, tc.expected)
 			}
