@@ -2,6 +2,7 @@ package utils
 
 import (
 	"log/slog"
+	"math"
 	"regexp"
 	"strings"
 	"time"
@@ -46,4 +47,17 @@ var WordPattern = regexp.MustCompile(`\b\w+(['-]\w+)*\b`)
 // Tokenize splits a string into tokens.
 func Tokenize(word string) []string {
 	return WordPattern.FindAllString(word, -1)
+}
+
+// EqualSliceEpsilon checks if two float64 slices are approximately equal.
+func EqualSliceEpsilon(a, b []float64, epsilon float64) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if math.Abs(a[i]-b[i]) > epsilon {
+			return false
+		}
+	}
+	return true
 }

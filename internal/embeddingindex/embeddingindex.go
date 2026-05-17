@@ -93,7 +93,7 @@ func (index *EmbeddingIndex) Vector(word string) []float64 {
 func (index *EmbeddingIndex) BuildFromDocuments(documents []string) error {
 	defer utils.Measure("EmbeddingIndex_BuildFromDocuments")()
 
-	index.DocumentEmbeddings = make([]float64, len(documents))
+	index.DocumentEmbeddings = make([]float64, 0, len(documents)*index.Dimension)
 	for _, doc := range documents {
 		embedding, err := index.EmbedDocument(doc)
 		if err != nil {
@@ -145,6 +145,10 @@ func (index *EmbeddingIndex) CosineSimilarity(v, m []float64) ([]float64, error)
 
 	// Normalize `v` and each row of `m`.
 	vNorm := norm(v)
+	if vNorm == 0 {
+		return make([]float64, n), nil
+	}
+
 	for i := 0; i < n; i++ {
 		start := i * index.Dimension
 		end := start + index.Dimension
@@ -168,6 +172,7 @@ func (index *EmbeddingIndex) CosineSimilarity(v, m []float64) ([]float64, error)
 }
 
 // TopKNeighbors returns the indices of the k most similar documents to the given document.
+// Assumes `k` is smaller than the number of documents.
 func (index *EmbeddingIndex) TopKNeighbors(document string, k int) ([]int, error) {
 	if len(index.DocumentEmbeddings) == 0 {
 		return nil, fmt.Errorf("empty document embeddings")
