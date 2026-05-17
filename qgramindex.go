@@ -166,7 +166,7 @@ func (index *QGramIndex) FindMatches(prefix string, delta int) ([]Match, error) 
 			continue
 		}
 
-		ped := PrefixEditDistance(prefix, index.NormedNames[synID])
+		ped := PrefixEditDistance(prefix, index.NormedNames[synID], delta)
 		pedCalculations++
 		if ped <= delta {
 			recID := index.SynonymToRecord[synID]

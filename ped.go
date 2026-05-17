@@ -3,25 +3,27 @@ package main
 
 import "slices"
 
-// PrefixEditDistance returns the PED of two strings, where `s1` is a prefix of `s2`.
-func PrefixEditDistance(s1, s2 string) int {
+// PrefixEditDistance returns the PED of two strings, where `s1` is a prefix of `s2`
+// if the PED is smaller or equal to `delta`; `delta` + 1 otherwise.
+func PrefixEditDistance(s1, s2 string, delta int) int {
 	// defer MeasureExecutionTime("PrefixEditDistance")()
 
-	n := len(s1)
-	m := len(s2)
+	n := len(s1) + 1
+	// It's enough to compute the first |s1| + delta + 1 columns.
+	m := min(n+delta, len(s2)+1)
 
 	// Only store the current and previous row and not the whole matrix.
-	// Initialize the first row to 0...m.
-	previousRow := make([]int, m+1)
-	currentRow := make([]int, m+1)
-	for col := 0; col <= m; col++ {
+	// Initialize the first row to 0...m-1.
+	previousRow := make([]int, m)
+	currentRow := make([]int, m)
+	for col := 0; col < m; col++ {
 		previousRow[col] = col
 	}
 
 	// Calculate the edit distance by taking the minimum cost of the three possible operations.
-	for row := 1; row <= n; row++ {
+	for row := 1; row < n; row++ {
 		currentRow[0] = row
-		for col := 1; col <= m; col++ {
+		for col := 1; col < m; col++ {
 			cost := func() int {
 				isDiffrent := 1
 				if s1[row-1] == s2[col-1] {
@@ -36,5 +38,5 @@ func PrefixEditDistance(s1, s2 string) int {
 	}
 
 	// Min of `previousRow` since it was swapt with `currentRow` in the loop.
-	return slices.Min(previousRow)
+	return min(slices.Min(previousRow), delta+1)
 }
