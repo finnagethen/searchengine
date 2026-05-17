@@ -5,6 +5,8 @@ import "slices"
 
 // PrefixEditDistance returns the PED of two strings, where `s1` is a prefix of `s2`.
 func PrefixEditDistance(s1, s2 string) int {
+	defer MeasureExecutionTime("PrefixEditDistance")()
+
 	n := len(s1)
 	m := len(s2)
 
@@ -22,7 +24,7 @@ func PrefixEditDistance(s1, s2 string) int {
 		for col := 1; col <= m; col++ {
 			cost := func() int {
 				isDiffrent := 1
-				if s1[col-1] == s2[row-1] {
+				if s1[row-1] == s2[col-1] {
 					isDiffrent = 0
 				}
 				return min(previousRow[col-1]+isDiffrent, previousRow[col]+1, currentRow[col-1]+1)

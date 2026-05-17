@@ -4,6 +4,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"slices"
 	"strconv"
@@ -31,7 +32,7 @@ type Info struct {
 
 // Match defines the return type of prefix querys
 type Match struct {
-	ID  SynonymID
+	ID  RecordID
 	PED int
 }
 
@@ -39,6 +40,7 @@ type QGramIndex struct {
 	Q               int
 	InvertedLists   map[string][]Posting // q-gram -> posting list
 	SynonymToRecord []RecordID           // synonym id -> record id
+	NormedNames     []string             // synonym id -> normalized synonym
 	Infos           []Info               // record id -> info
 }
 
@@ -59,6 +61,8 @@ func NewQGramIndex(q int) *QGramIndex {
 //
 //	Albert Einstein\t275\tEinstein;A. Einstein\tGerman physicist\t...
 func (index *QGramIndex) BuildFormFile(path string) error {
+	defer MeasureExecutionTime("QGramIndex_BuildFormFile")()
+
 	file, err := os.Open(path)
 	if err != nil {
 		return err
@@ -94,6 +98,8 @@ func (index *QGramIndex) BuildFormFile(path string) error {
 		for _, n := range names {
 			index.SynonymToRecord = append(index.SynonymToRecord, recordID)
 			normedName := normalize(n)
+			index.NormedNames = append(index.NormedNames, normedName)
+
 			for _, qgram := range computeQGrams(normedName, index.Q) {
 				postings := index.InvertedLists[qgram]
 				postingsLen := len(postings)
@@ -123,6 +129,8 @@ func (index *QGramIndex) BuildFormFile(path string) error {
 // and prefix x. The prefix should be normalized and non-empty.
 // Returns a list of (ID, PED) tuples ordered first by PED and then record score.
 func (index *QGramIndex) FindMatches(prefix string, delta int) ([]Match, error) {
+	defer MeasureExecutionTime("QGramIndex_FindMatches")()
+
 	if len(prefix) == 0 {
 		return nil, fmt.Errorf("prefix must not be empty")
 	}
@@ -133,32 +141,58 @@ func (index *QGramIndex) FindMatches(prefix string, delta int) ([]Match, error) 
 		return nil, fmt.Errorf("threshold must be positive (got %d); adjust delta", threshold)
 	}
 
+	// Count frequencies of qgrams in the prefix.
+	prefixQGrams := computeQGrams(prefix, index.Q)
+	prefixFreqs := make(map[string]int)
+	for _, q := range prefixQGrams {
+		prefixFreqs[q]++
+	}
+
 	// Maps the records to the number of qgrams in common with the prefix.
-	candidates := make(map[SynonymID]int)
-	for _, qgram := range computeQGrams(prefix, index.Q) {
-		// Find all records with at least `threshold` qgrams in common.
-		matches := index.InvertedLists[qgram]
-		for _, match := range matches {
-			candidates[match.ID] += 1
+	candidates := make(map[RecordID]int)
+	for qgram, freq := range prefixFreqs {
+		postings := index.InvertedLists[qgram]
+		for _, posting := range postings {
+			candidates[index.SynonymToRecord[posting.ID]] += min(posting.Frequency, freq)
 		}
 	}
 
-	// Filter out records with less than `threshold` qgrams in common.
-	// Calculate the PED(x, y) for all relevant records.
+	// Filter out synonyms with less than `threshold` qgrams in common.
+	// Calculate the PED(x, y) for all relevant synonyms.
+	matches := make(map[RecordID]int)
+	pedCalculations := 0 // Counter for stats.
+	for synID, freq := range candidates {
+		if freq < threshold {
+			continue
+		}
+
+		ped := PrefixEditDistance(prefix, index.NormedNames[synID])
+		pedCalculations++
+		if ped <= delta {
+			recID := index.SynonymToRecord[synID]
+
+			// If a record has multiple matching synonyms, keep the one with the lowest PED.
+			if oldPED, ok := matches[recID]; !ok || ped < oldPED {
+				matches[recID] = ped
+			}
+		}
+	}
+
+	log.Printf("%d actual PED calculations out of %d candidates.", pedCalculations, len(candidates))
+
+	// Convert the map to a slice of (ID, PED) tuples.
 	var result []Match
-	for id, matchCount := range candidates {
-		if matchCount < threshold {
-			result = append(result, Match{id, matchCount})
-		}
+	for recID, bestPED := range matches {
+		result = append(result, Match{ID: recID, PED: bestPED})
 	}
 
-	// Sort by PED and then record-score descending.
+	// Sort first by PED (ascending) and then by record-score (descending).
 	slices.SortFunc(result, func(a, b Match) int {
-		pedCmp := b.PED - a.PED
+		pedCmp := a.PED - b.PED // smaller is better
 		if pedCmp != 0 {
 			return pedCmp
 		}
-		return index.Infos[b.ID].Score - index.Infos[a.ID].Score
+		return index.Infos[b.ID].Score - index.Infos[a.ID].Score // bigger is better
 	})
 
 	return result, nil
