@@ -7,7 +7,7 @@ import (
 
 func TestQGramIndex_BuildFormFile(t *testing.T) {
 	index := NewQGramIndex(3)
-	err := index.BuildFormFile("test.tsv")
+	err := index.BuildFormFile("../../data/test.tsv")
 	if err != nil {
 		t.Fatalf("BuildFormFile failed: %v", err)
 	}
@@ -76,7 +76,7 @@ func TestQGramIndex_BuildFormFile(t *testing.T) {
 
 func TestQGramIndex_FindMatches(t *testing.T) {
 	index := NewQGramIndex(3)
-	err := index.BuildFormFile("test.tsv")
+	err := index.BuildFormFile("../../data/test.tsv")
 	if err != nil {
 		t.Fatalf("BuildFormFile failed: %v", err)
 	}
