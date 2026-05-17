@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestBuildFormFile(t *testing.T) {
+func TestQGramIndex_BuildFormFile(t *testing.T) {
 	index := NewQGramIndex(3)
 	err := index.BuildFormFile("test.tsv")
 	if err != nil {
@@ -26,7 +26,7 @@ func TestBuildFormFile(t *testing.T) {
 	}
 
 	// Synonyms: "frei"(0), "fre"(0), "fri"(0), "brei"(1), "bre"(1), "bri"(1)
-	expectedSynonymToRecord := []int{0, 0, 0, 1, 1, 1}
+	expectedSynonymToRecord := []RecordID{0, 0, 0, 1, 1, 1}
 
 	expectedInvertedLists := map[string][]Posting{
 		"$$f": {
@@ -71,5 +71,39 @@ func TestBuildFormFile(t *testing.T) {
 	if !reflect.DeepEqual(index.InvertedLists, expectedInvertedLists) {
 		t.Errorf("InvertedLists mismatch.\nExpected: %+v\nGot: %+v",
 			expectedInvertedLists, index.InvertedLists)
+	}
+}
+
+func TestQGramIndex_FindMatches(t *testing.T) {
+	index := NewQGramIndex(3)
+	err := index.BuildFormFile("test.tsv")
+	if err != nil {
+		t.Fatalf("BuildFormFile failed: %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		prefix   string
+		delta    int
+		expected []Match
+	}{
+		{"Prefix 'frei'; Delta 0", "frei", 0, []Match{
+			{ID: 1, PED: 0},
+		}},
+		{"Prefix 'frei'; Delta 1", "fre", 1, []Match{
+			{ID: 1, PED: 0}, {ID: 2, PED: 1}},
+		},
+		{"Prefix 'freib'; Delta 1", "fre", 1, []Match{
+			{ID: 1, PED: 1},
+		}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, _ := index.FindMatches(tc.prefix, tc.delta)
+			if !reflect.DeepEqual(got, tc.expected) {
+				t.Errorf("FindMatches(%q, %d) = %+v; want %+v", tc.prefix, tc.delta, got, tc.expected)
+			}
+		})
 	}
 }

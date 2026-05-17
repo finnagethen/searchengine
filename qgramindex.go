@@ -38,7 +38,7 @@ type Match struct {
 type QGramIndex struct {
 	Q               int
 	InvertedLists   map[string][]Posting // q-gram -> posting list
-	SynonymToRecord []SynonymID          // synonym id -> record id
+	SynonymToRecord []RecordID           // synonym id -> record id
 	Infos           []Info               // record id -> info
 }
 
@@ -82,7 +82,7 @@ func (index *QGramIndex) BuildFormFile(path string) error {
 			return err
 		}
 
-		// Cache the nmae, score and additional info.
+		// Cache the name, score and additional info.
 		index.Infos = append(index.Infos, Info{
 			Name:  name,
 			Score: scoreConverted,
