@@ -43,7 +43,7 @@ func Normalize(word string) string {
 
 var WordPattern = regexp.MustCompile(`\b\w+(['-]\w+)*\b`)
 
-// Tokanize splits a string into tokens.
-func Tokanize(word string) []string {
+// Tokenize splits a string into tokens.
+func Tokenize(word string) []string {
 	return WordPattern.FindAllString(word, -1)
 }

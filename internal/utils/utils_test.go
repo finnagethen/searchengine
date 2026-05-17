@@ -60,7 +60,7 @@ func TestNormalize(t *testing.T) {
 	}
 }
 
-func TestTokanize(t *testing.T) {
+func TestTokenize(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected []string
@@ -92,7 +92,7 @@ func TestTokanize(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		got := Tokanize(tc.input)
+		got := Tokenize(tc.input)
 
 		if !reflect.DeepEqual(got, tc.expected) {
 			t.Errorf("Tokanize(%q) = %#v; want %#v",
