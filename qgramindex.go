@@ -148,12 +148,12 @@ func (index *QGramIndex) FindMatches(prefix string, delta int) ([]Match, error) 
 		prefixFreqs[q]++
 	}
 
-	// Maps the records to the number of qgrams in common with the prefix.
-	candidates := make(map[RecordID]int)
+	// Maps the synonyms to the number of qgrams in common with the prefix.
+	candidates := make(map[SynonymID]int)
 	for qgram, freq := range prefixFreqs {
 		postings := index.InvertedLists[qgram]
 		for _, posting := range postings {
-			candidates[index.SynonymToRecord[posting.ID]] += min(posting.Frequency, freq)
+			candidates[posting.ID] += min(posting.Frequency, freq)
 		}
 	}
 

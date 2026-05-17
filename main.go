@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"time"
 )
 
 type Args struct {
@@ -48,13 +47,11 @@ func main() {
 		query = normalize(query)
 		delta := len(query) / (args.q + 1)
 
-		start := time.Now()
 		postings, err := index.FindMatches(query, delta)
 		if err != nil {
 			log.Fatal(err)
 		}
-		elapsed := time.Since(start)
-		log.Printf("Found %d matches in %s", len(postings), elapsed)
+		log.Printf("Found %d matches.", len(postings))
 
 		// Print only the first 5 results.
 		for _, posting := range postings[:min(5, len(postings))] {
