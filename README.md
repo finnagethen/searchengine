@@ -18,7 +18,7 @@ Where:
 
 ## Todos
 
-- [x] Fuzzy search using q-gram qIndex and prefix edit distance
+- [x] Fuzzy search using Q-Gram Index and prefix edit distance
 - [ ] BM25 ranking
 - [x] Similarity search using word embeddings
 - [x] Use standarized format for word embeddings
