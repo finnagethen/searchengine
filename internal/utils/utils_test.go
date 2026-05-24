@@ -103,14 +103,14 @@ func TestTokenize(t *testing.T) {
 
 func TestEqualSliceEpsilon(t *testing.T) {
 	tests := []struct {
-		a, b     []float64
-		epsilon  float64
+		a, b     []float32
+		epsilon  float32
 		expected bool
 	}{
-		{[]float64{1.0, 2.0}, []float64{1.0, 2.0}, 0.001, true},
-		{[]float64{1.0, 2.0}, []float64{1.001, 2.001}, 0.01, true},
-		{[]float64{1.0, 2.0}, []float64{1.01, 2.01}, 0.001, false},
-		{[]float64{1.0}, []float64{1.0, 2.0}, 0.001, false},
+		{[]float32{1.0, 2.0}, []float32{1.0, 2.0}, 0.001, true},
+		{[]float32{1.0, 2.0}, []float32{1.001, 2.001}, 0.01, true},
+		{[]float32{1.0, 2.0}, []float32{1.01, 2.01}, 0.001, false},
+		{[]float32{1.0}, []float32{1.0, 2.0}, 0.001, false},
 	}
 
 	for _, tc := range tests {

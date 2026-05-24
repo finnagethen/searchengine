@@ -20,16 +20,16 @@ class Embedder:
         """
         Reads documents from a file and generates embeddings for each document
         using the specified model.
-        The file is expected to contain one document per line. Empty lines are
-        ignored.
+        The file is expected to contain one document per line.
         """
         documents: list[str] = []
 
         with open(path, "r", encoding="utf-8") as file:
-            for line in file:
-                document = line.strip()
-                if document:
-                    documents.append(document)
+            # Skip header
+            next(file, None)
+
+            for document in file:
+                documents.append(document)
 
         self.embeddings = self.model.encode(
             documents,

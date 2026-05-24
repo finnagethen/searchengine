@@ -17,26 +17,31 @@ import (
 	"github.com/finnagethen/searchengine/internal/utils"
 )
 
+// TODO: remove unused funtions (Tokenize)
+
 type Args struct {
-	file string
-	q    int
-	topK int
+	filePath       string
+	embeddingsPath string
+	q              int
+	topK           int
 }
 
 func parseArgs() (Args, error) {
-	file := flag.String("file", "", "path to the input file")
+	filePath := flag.String("file", "", "path to the input file")
+	embeddingsPath := flag.String("embeddings", "./data/embeddings.bin", "path to the embeddings file")
 	q := flag.Int("q", 3, "q-grams")
 	topK := flag.Int("k", 5, "number of top similar documents to return")
 	flag.Parse()
 
-	if *file == "" {
+	if *filePath == "" {
 		return Args{}, fmt.Errorf("file must be specified")
 	}
 
 	return Args{
-		file: *file,
-		q:    *q,
-		topK: *topK,
+		filePath:       *filePath,
+		embeddingsPath: *embeddingsPath,
+		q:              *q,
+		topK:           *topK,
 	}, nil
 }
 
@@ -69,10 +74,10 @@ func main() {
 	qIndex := qgramindex.NewQGramIndex(args.q)
 
 	slog.Info("building qIndex",
-		"file", args.file,
+		"file", args.filePath,
 		"q", args.q,
 	)
-	err = qIndex.BuildFormFile(args.file)
+	err = qIndex.BuildFormFile(args.filePath)
 	if err != nil {
 		slog.Error("error building qIndex", "error", err)
 		os.Exit(1)
@@ -81,22 +86,12 @@ func main() {
 	// Initialize the EmbeddingIndex.
 	eIndex := embeddingindex.NewEmbeddingIndex()
 
-	err = eIndex.LoadEmbeddings("data/vocab.json", "data/embeddings.bin")
+	slog.Info("loading embeddings",
+		"file", args.embeddingsPath,
+	)
+	err = eIndex.LoadEmbeddings(args.embeddingsPath)
 	if err != nil {
 		slog.Error("error loading embeddings", "error", err)
-		os.Exit(1)
-	}
-
-	// Build the embedding index from the plots.
-	slog.Info("computing plot embeddings")
-	var documents []string
-	for _, info := range qIndex.Infos {
-		// info.Infos[1] holds the plot.
-		documents = append(documents, info.Infos[1])
-	}
-	err = eIndex.BuildFromDocuments(documents)
-	if err != nil {
-		slog.Error("error building document embeddings", "error", err)
 		os.Exit(1)
 	}
 
@@ -159,35 +154,29 @@ func main() {
 		}
 
 		index := selection - 1
-		plot := plots[index]
 		name := names[index]
 
 		fmt.Printf("\nTop %d most similar movies to '%s' (and the movie itself):\n", args.topK, name)
 
 		// Search for top K + 1 (the first result is always the movie itself).
-		indices, err := eIndex.TopKNeighbors(plot, args.topK+1)
+		documentID := int(postings[index].ID)
+		indices, err := eIndex.TopKNeighbors(documentID, args.topK+1)
 		if err != nil {
 			slog.Error("error finding top k neighbors", "error", err)
 			continue
 		}
-
-		// Calculate cosine similarities manually since Go's `TopKNeighbors`
-		// only returns indices, not the distances like the Python script does.
-		docEmbedding, _ := eIndex.EmbedDocument(plot)
-		similarities, _ := eIndex.CosineSimilarity(docEmbedding, eIndex.DocumentEmbeddings)
 
 		for i, idx := range indices {
 			info := qIndex.Infos[idx]
 			nName, nInfos := info.Name, info.Infos
 			nYear := nInfos[0]
 			nPlot := nInfos[1]
-			dist := similarities[idx]
 
 			if len(nPlot) > 1000 {
 				nPlot = nPlot[:1000] + "..."
 			}
 
-			header := fmt.Sprintf("%d. %s (%s | sim = %.4f)", i, nName, nYear, dist)
+			header := fmt.Sprintf("%d. %s %s", i, nName, nYear)
 			separator := strings.Repeat("-", len(header))
 			fmt.Printf("  %s\n  %s\n  %s\n\n", header, separator, nPlot)
 		}

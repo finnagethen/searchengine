@@ -49,13 +49,13 @@ func Tokenize(word string) []string {
 	return WordPattern.FindAllString(word, -1)
 }
 
-// EqualSliceEpsilon checks if two float64 slices are approximately equal.
-func EqualSliceEpsilon(a, b []float64, epsilon float64) bool {
+// EqualSliceEpsilon checks if two float32 slices are approximately equal.
+func EqualSliceEpsilon(a, b []float32, epsilon float32) bool {
 	if len(a) != len(b) {
 		return false
 	}
 	for i := range a {
-		if math.Abs(a[i]-b[i]) > epsilon {
+		if float32(math.Abs(float64(a[i]-b[i]))) > epsilon {
 			return false
 		}
 	}
