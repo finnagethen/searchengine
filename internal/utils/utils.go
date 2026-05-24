@@ -3,7 +3,6 @@ package utils
 import (
 	"log/slog"
 	"math"
-	"regexp"
 	"strings"
 	"time"
 )
@@ -40,13 +39,6 @@ func Normalize(word string) string {
 	}
 
 	return strings.ToLower(builder.String())
-}
-
-var WordPattern = regexp.MustCompile(`\b\w+(['-]\w+)*\b`)
-
-// Tokenize splits a string into tokens.
-func Tokenize(word string) []string {
-	return WordPattern.FindAllString(word, -1)
 }
 
 // EqualSliceEpsilon checks if two float32 slices are approximately equal.

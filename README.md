@@ -19,8 +19,8 @@ Where:
 ## Todos
 
 - [x] Fuzzy search using q-gram qIndex and prefix edit distance
-- [ ] BM25 ranking and evaluation
+- [ ] BM25 ranking
 - [x] Similarity search using word embeddings
-- [ ] Use standarized format for word embeddings
-- [ ] Scrape data for tv shows
+- [x] Use standarized format for word embeddings
+- [ ] Scrape data for tv-shows
 - [ ] Make it accessable via ssh (terminal website)

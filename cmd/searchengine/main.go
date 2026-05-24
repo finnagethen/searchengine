@@ -17,7 +17,7 @@ import (
 	"github.com/finnagethen/searchengine/internal/utils"
 )
 
-// TODO: remove unused funtions (Tokenize)
+// BUG: "hunger games" query does not find "The Hunger Games"
 
 type Args struct {
 	filePath       string
