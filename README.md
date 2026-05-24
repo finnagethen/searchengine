@@ -23,4 +23,20 @@ Where:
 - [x] Similarity search using word embeddings
 - [x] Use standarized format for word embeddings
 - [ ] Scrape data for tv-shows
+  - Use IMDb for tv-shows data
+  `https://datasets.imdbws.com/`
+  - Use SPARQL and Wikidata for tv-show synonyms
+  ```
+  SELECT ?item ?itemLabel ?alias WHERE {
+  # Replace wd:Q64 with the Wikidata Q-identifier you want
+  VALUES ?item { wd:Q147235 }
+  
+  # Retrieve aliases (skos:altLabel)
+  ?item skos:altLabel ?alias .
+  FILTER(LANG(?alias) = "en")
+  
+  # Retrieve labels (to ensure we know what the base item is)
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en" }
+  }
+  ```
 - [ ] Make it accessable via ssh (terminal website)
