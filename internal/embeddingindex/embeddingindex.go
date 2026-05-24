@@ -2,188 +2,98 @@ package embeddingindex
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"slices"
 
 	"github.com/finnagethen/searchengine/internal/utils"
 )
 
+// EmbeddingFileHeader represents the header of the binary file containing the embeddings.
+type EmbeddingFileHeader struct {
+	NumDocs   uint32
+	Dimension uint32
+}
+
 type EmbeddingIndex struct {
-	Vocab              map[string]int // token -> token index
-	TokenEmbedings     []float64      // token index -> embedding
-	DocumentEmbeddings []float64      // document index -> embedding
-	Dimension          int            // dimension of the embeddings
+	Header             EmbeddingFileHeader // header containing the number of documents and dimension of the embeddings
+	DocumentEmbeddings [][]float32         // document index -> document embedding
 }
 
 // NewEmbeddingIndex returns a new EmbeddingIndex.
 func NewEmbeddingIndex() *EmbeddingIndex {
-	return &EmbeddingIndex{
-		Vocab: make(map[string]int),
-	}
+	return &EmbeddingIndex{}
 }
 
-// LoadEmbeddings loads the token embeddings from a vocabulary file and a binary file containing the embeddings.
-// The vocabulary file should be in JSON format and contain a map of tokens to their indices.
+// LoadEmbeddings loads the document embeddings from a binary file containing the embeddings.
 // The binary file should contain the following structure:
 //
-//	<num words>
-//	<dimension>
-//	<embeddings>
-func (index *EmbeddingIndex) LoadEmbeddings(vocabPath, binPath string) error {
+//	<num douments> (uint32)
+//	<dimension> (uint32)
+//	<embeddings> ([]float32)
+func (index *EmbeddingIndex) LoadEmbeddings(embeddingsPath string) error {
 	defer utils.Measure("EmbeddingIndex_LoadEmbeddings")()
 
-	vocabData, err := os.ReadFile(vocabPath)
+	file, err := os.Open(embeddingsPath)
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
-	// Parse the vocabulary.
-	if err := json.Unmarshal(vocabData, &index.Vocab); err != nil {
+	if err = binary.Read(file, binary.LittleEndian, &index.Header); err != nil {
 		return err
 	}
 
-	// Load the embeddings.
-	binFile, err := os.Open(binPath)
-	if err != nil {
-		return err
-	}
-	defer binFile.Close()
+	numDocs, dim := int(index.Header.NumDocs), int(index.Header.Dimension)
 
-	var numWords, dim uint32
-
-	err = binary.Read(binFile, binary.LittleEndian, &numWords)
-	if err != nil {
+	embeddings := make([]float32, numDocs*dim)
+	if err := binary.Read(file, binary.LittleEndian, embeddings); err != nil {
 		return err
 	}
 
-	err = binary.Read(binFile, binary.LittleEndian, &dim)
-	if err != nil {
-		return err
+	// Reshape the embeddings into [][]float32.
+	vectors := make([][]float32, numDocs)
+	for i := 0; i < numDocs; i++ {
+		start := i * dim
+		end := start + dim
+		vectors[i] = embeddings[start:end]
 	}
-
-	index.TokenEmbedings = make([]float64, int(numWords*dim))
-	index.Dimension = int(dim)
-
-	err = binary.Read(binFile, binary.LittleEndian, index.TokenEmbedings)
-	if err != nil {
-		return err
-	}
+	index.DocumentEmbeddings = vectors
 
 	return nil
 }
 
-// Vector retrieves the embedding vector for the given word from the index.
-// Returns all zero vectors for out-of-vocabulary words.
-func (index *EmbeddingIndex) Vector(word string) []float64 {
-	idx, ok := index.Vocab[word]
-	if !ok {
-		return make([]float64, index.Dimension)
+// CosineSimilarity calculates the cosine similarity of a vector `v` of shape [N] and a matrix `m` of shape [M, N].
+// Returns the cosine similarities as a vector of shape [M] or an error on failure.
+// The vectors are expected to be normalized.
+func (index *EmbeddingIndex) CosineSimilarity(v []float32, m [][]float32) ([]float32, error) {
+	if len(v) != len(m[0]) {
+		return nil, fmt.Errorf("vectors must have the same length")
+	}
+	if int(index.Header.Dimension) != len(v) {
+		return nil, fmt.Errorf("vectors must have the same dimension as the embeddings")
 	}
 
-	start := idx * index.Dimension
-	end := start + index.Dimension
-
-	return index.TokenEmbedings[start:end]
-}
-
-// BuildFromDocuments builds and stores the embeddings of the given documents.
-func (index *EmbeddingIndex) BuildFromDocuments(documents []string) error {
-	defer utils.Measure("EmbeddingIndex_BuildFromDocuments")()
-
-	index.DocumentEmbeddings = make([]float64, 0, len(documents)*index.Dimension)
-	for _, doc := range documents {
-		embedding, err := index.EmbedDocument(doc)
-		if err != nil {
-			return err
+	result := make([]float32, len(m))
+	for i, row := range m {
+		var dotProduct float32
+		for j := range v {
+			dotProduct += v[j] * row[j]
 		}
-		index.DocumentEmbeddings = append(index.DocumentEmbeddings, embedding...)
-	}
-
-	return nil
-}
-
-// EmbedDocument embeds the given document and returns the embedding vector.
-// Calculates the embedding by splitting the document into tokens and summing them.
-// Out-of-vocabulary tokens are treated as all zero vectors.
-func (index *EmbeddingIndex) EmbedDocument(document string) ([]float64, error) {
-	if len(index.TokenEmbedings) == 0 {
-		return nil, fmt.Errorf("empty token embeddings")
-	}
-
-	documentEmbedding := make([]float64, index.Dimension)
-
-	tokens := utils.Tokenize(document)
-	for _, token := range tokens {
-		embedding := index.Vector(token)
-		// Sum the token embeddings to get the document embedding.
-		for i := 0; i < index.Dimension; i++ {
-			documentEmbedding[i] += embedding[i]
-		}
-	}
-
-	return documentEmbedding, nil
-}
-
-// CosineSimilarity calculates the cosine similarity between a vector `v` of shape [D]
-// and all rows of a matrix `m` with shape [N x D].
-// Returns a vector of shape [N] containing the cosine similarities.
-func (index *EmbeddingIndex) CosineSimilarity(v, m []float64) ([]float64, error) {
-	if len(v) != index.Dimension {
-		return nil, fmt.Errorf("vector must have dimension %d", index.Dimension)
-	}
-
-	if len(m)%index.Dimension != 0 {
-		return nil, fmt.Errorf("matrix must have a multiple of %d rows", index.Dimension)
-	}
-
-	// `n` is the number of rows in `m`, each with 'index.Dimension' columns.
-	n := len(m) / index.Dimension
-	result := make([]float64, n)
-
-	// Normalize `v` and each row of `m`.
-	vNorm := norm(v)
-	if vNorm == 0 {
-		return make([]float64, n), nil
-	}
-
-	for i := 0; i < n; i++ {
-		start := i * index.Dimension
-		end := start + index.Dimension
-		row := m[start:end]
-
-		rowNorm := norm(row)
-		if rowNorm == 0 { // Cannot divide by zero.
-			continue
-		}
-
-		// Calculate the dot product of `v` and `row`.
-		var dot float64
-		for j := 0; j < index.Dimension; j++ {
-			dot += v[j] * row[j]
-		}
-
-		result[i] = dot / (vNorm * rowNorm)
+		result[i] = dotProduct
 	}
 
 	return result, nil
 }
 
-// TopKNeighbors returns the indices of the k most similar documents to the given document.
+// TopKNeighbors returns the indices of the k most similar documents to the given document index.
 // Assumes `k` is smaller than the number of documents.
-func (index *EmbeddingIndex) TopKNeighbors(document string, k int) ([]int, error) {
+func (index *EmbeddingIndex) TopKNeighbors(document int, k int) ([]int, error) {
 	if len(index.DocumentEmbeddings) == 0 {
 		return nil, fmt.Errorf("empty document embeddings")
 	}
 
-	documentEmbedding, err := index.EmbedDocument(document)
-	if err != nil {
-		return nil, err
-	}
-
-	cosineSimilarities, err := index.CosineSimilarity(documentEmbedding, index.DocumentEmbeddings)
+	cosineSimilarities, err := index.CosineSimilarity(index.DocumentEmbeddings[document], index.DocumentEmbeddings)
 	if err != nil {
 		return nil, err
 	}
@@ -208,13 +118,13 @@ func (index *EmbeddingIndex) TopKNeighbors(document string, k int) ([]int, error
 }
 
 // norm returns the Euclidean length of a vector.
-func norm(v []float64) float64 {
-	var norm float64
-	for _, x := range v {
-		norm += x * x
-	}
-	if norm == 0 {
-		return 0
-	}
-	return math.Sqrt(norm)
-}
+//func norm(v []float32) float32 {
+//	var n float32
+//	for _, x := range v {
+//		n += x * x
+//	}
+//	if n == 0 {
+//		return 0
+//	}
+//	return float32(math.Sqrt(float64(n)))
+//}

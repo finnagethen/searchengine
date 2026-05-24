@@ -4,7 +4,10 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"log"
 	"log/slog"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strconv"
 	"strings"
@@ -38,6 +41,10 @@ func parseArgs() (Args, error) {
 }
 
 func main() {
+	go func() {
+		log.Print(http.ListenAndServe(":1234", nil))
+	}()
+
 	// Redirect logs to JSON file.
 	//file, err := os.Create("logs.json")
 	//if err != nil {
